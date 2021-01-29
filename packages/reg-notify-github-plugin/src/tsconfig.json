@@ -1,9 +1,0 @@
-{
-  "extends": "./tsconfig.build.json",
-  "compilerOptions": {
-    "paths": {
-      "reg-gh-app-interface": ["./reg-gh-app-interface/src/index.ts"],
-      "reg-suit-interface": ["./reg-suit-interface/src/index.ts"]
-    }
-  }
-}

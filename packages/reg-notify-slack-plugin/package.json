@@ -1,11 +1,11 @@
 {
   "name": "reg-notify-slack-plugin",
-  "version": "0.7.5",
+  "version": "0.10.10",
   "description": "Notify reg-suit result to Slack channel.",
   "main": "lib/index.js",
   "scripts": {
     "test": "echo T.B.D.",
-    "prepublish": "tsc -p src/tsconfig.build.json"
+    "prepublish": "tsc -p tsconfig.build.json"
   },
   "keywords": [
     "reg",
@@ -18,13 +18,12 @@
   "repository": "git+https://github.com/reg-viz/reg-suit.git",
   "license": "MIT",
   "dependencies": {
-    "request": "^2.81.0",
-    "request-promise": "^4.2.1"
+    "request": "^2.88.2",
+    "request-promise": "^4.2.6"
   },
   "devDependencies": {
-    "@types/request-promise": "^4.1.35",
-    "reg-gh-app-interface": "^0.5.9",
-    "reg-suit-interface": "^0.7.5",
-    "typescript": "2.8.1"
+    "@types/request-promise": "4.1.47",
+    "reg-suit-interface": "^0.10.10",
+    "typescript": "4.1.3"
   }
 }

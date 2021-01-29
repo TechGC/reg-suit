@@ -1,10 +1,9 @@
-/* tslint:disable:no-console */
 import { createLogger } from "reg-suit-util";
 import { GcsPublisherPlugin } from "../lib/gcs-publisher-plugin";
 import { GcsBucketPreparer } from "../lib/gcs-bucket-preparer";
-import * as glob from "glob";
-import * as assert from "assert";
-import Gcs from "@google-cloud/storage";
+import glob from "glob";
+import assert from "assert";
+import { Storage } from "@google-cloud/storage";
 
 const preparer = new GcsBucketPreparer();
 
@@ -31,13 +30,13 @@ const dirsB = {
 };
 
 async function after(bn: string) {
-  const bucket = await Gcs().bucket(bn);
+  const bucket = await new Storage().bucket(bn);
   await bucket.deleteFiles();
   await bucket.delete();
 }
 
 async function case1() {
-  const { bucketName } = await preparer.prepare({ ...baseConf, options: { createBucket: true, }, workingDirs: dirsA });
+  const { bucketName } = await preparer.prepare({ ...baseConf, options: { createBucket: true }, workingDirs: dirsA });
   try {
     const plugin = new GcsPublisherPlugin();
     plugin.init({
@@ -73,13 +72,12 @@ async function case1() {
 
 async function main() {
   try {
-
     await case1();
-
+    // eslint-disable-next-line no-console
     console.log(" 🌟  Test was ended successfully! 🌟 ");
     process.exit(0);
-
   } catch (err) {
+    // eslint-disable-next-line no-console
     console.error(err);
     process.exit(1);
   }

@@ -1,6 +1,6 @@
 {
   "name": "reg-suit",
-  "version": "0.7.15",
+  "version": "0.10.13",
   "description": "",
   "bin": {
     "reg-suit": "lib/cli.js"
@@ -9,7 +9,7 @@
     "test": "echo \"T.B.D.\"",
     "update:desc": "node ../../tools/extract-plugin-desc.js",
     "copy:readme": "cp -f ../../README.md .",
-    "prepublish": "npm run update:desc && npm run copy:readme && tsc -p src/tsconfig.build.json"
+    "prepublish": "npm run update:desc && npm run copy:readme && tsc -p tsconfig.build.json"
   },
   "keywords": [
     "reg",
@@ -24,17 +24,18 @@
   "repository": "git+https://github.com/reg-viz/reg-suit.git",
   "license": "MIT",
   "dependencies": {
-    "cp-file": "^4.2.0",
-    "ignore": "^3.3.7",
-    "inquirer": "^3.1.1",
-    "reg-suit-core": "^0.7.15",
-    "reg-suit-util": "^0.7.6",
-    "yargs": "^8.0.2"
+    "cp-file": "9.0.0",
+    "ignore": "5.1.8",
+    "inquirer": "7.3.3",
+    "reg-suit-core": "^0.10.12",
+    "reg-suit-util": "^0.10.10",
+    "yargs": "16.2.0"
   },
   "devDependencies": {
-    "@types/inquirer": "^0.0.35",
-    "@types/yargs": "^8.0.0",
-    "reg-suit-interface": "^0.7.5",
-    "typescript": "2.8.1"
+    "@types/cp-file": "6.1.2",
+    "@types/inquirer": "7.3.1",
+    "@types/yargs": "15.0.12",
+    "reg-suit-interface": "^0.10.10",
+    "typescript": "4.1.3"
   }
 }

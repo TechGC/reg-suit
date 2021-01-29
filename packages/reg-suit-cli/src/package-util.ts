@@ -1,12 +1,12 @@
-import * as child_process from "child_process";
-import * as fs from "fs";
-import * as path from "path";
+import child_process from "child_process";
+import fs from "fs";
+import path from "path";
 import { fsUtil } from "reg-suit-util";
 
 export const PLUGIN_NAME_REGEXP = /^reg-.*-plugin$/;
 const CLI_MODULE_ID = require(path.join(__dirname, "..", "package.json"))["name"] as string;
 
-export type NpmClient = "npm" | "yarn";
+export type NpmClient = "npm" | "yarn" | "yarn workspace";
 
 export class PackageUtil {
   installPackages(client: NpmClient, packageNames: string[]): Promise<string[]> {
@@ -20,10 +20,15 @@ export class PackageUtil {
       cliArguments.push("yarn");
       cliArguments.push("add");
       cliArguments.push("-D");
+    } else if (client === "yarn workspace") {
+      cliArguments.push("yarn");
+      cliArguments.push("add");
+      cliArguments.push("-D");
+      cliArguments.push("-W");
     }
     const args = [...cliArguments, ...packageNames];
     return new Promise((resolve, reject) => {
-      child_process.exec(args.join(" "), (error, stdout, stderr) => {
+      child_process.exec(args.join(" "), error => {
         if (error) {
           return reject(error);
         }
@@ -59,10 +64,10 @@ export class PackageUtil {
       const packageJson = JSON.parse(fs.readFileSync(path.join(cwd, "package.json"), "utf8"));
       let result: string[] = [];
       if (packageJson["dependencies"]) {
-        result = [ ...result, ...Object.keys(packageJson["dependencies"])];
+        result = [...result, ...Object.keys(packageJson["dependencies"])];
       }
       if (packageJson["devDependencies"]) {
-        result = [ ...result, ...Object.keys(packageJson["devDependencies"])];
+        result = [...result, ...Object.keys(packageJson["devDependencies"])];
       }
       return result.filter(dep => PLUGIN_NAME_REGEXP.test(dep));
     } catch (e) {

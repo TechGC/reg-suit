@@ -3,7 +3,6 @@ import { GitCmdClient } from "./git-cmd-client";
 export type CommitNode = string[];
 
 export class CommitExplorer {
-
   private _gitCmdClient = new GitCmdClient();
   private _commitNodes!: CommitNode[];
   private _branchName!: string;
@@ -12,28 +11,31 @@ export class CommitExplorer {
   /*
    * e.g. return `[["a38df15", "8e1ac3a"], ["8e1ac3a", "7ba8507"]]`.
    *      The first element of node means commit hash, rest elements means parent commit hashes.
-  */
+   */
   getCommitNodes(): CommitNode[] {
-    return this._gitCmdClient.logGraph()
+    return this._gitCmdClient
+      .logGraph()
       .split("\n")
-      .map((hashes: string) => (
+      .map((hashes: string) =>
         hashes
           .replace(/\*|\/|\||\\|_|-+\.|/g, "")
           .split(" ")
-          .filter(hash => !!hash)
-      ))
+          .filter(hash => !!hash),
+      )
       .filter((hashes: CommitNode) => hashes.length);
   }
 
   /*
    * e.g. return `master`.
-  */
+   */
   getCurrentBranchName(): string {
     const currentName = this._gitCmdClient.currentName().replace("\n", "");
-    if (currentName.startsWith("(HEAD detached") ||
+    if (
+      currentName.startsWith("(HEAD detached") ||
       currentName.startsWith("(no branch") ||
       currentName.startsWith("(detached from") ||
-      (currentName.startsWith("[") && currentName.indexOf("detached") !== -1)) {
+      (currentName.startsWith("[") && currentName.indexOf("detached") !== -1)
+    ) {
       throw new Error("Can't detect branch name because HEAD is on detached commit node.");
     }
     return currentName;
@@ -41,7 +43,7 @@ export class CommitExplorer {
 
   /*
    * e.g. return `ede92258d154f1ba1e88dc109a83b9ba143d561e`.
-  */
+   */
   getCurrentCommitHash(): string {
     const currentName = this._branchName;
     if (!currentName || !currentName.length) {
@@ -53,7 +55,7 @@ export class CommitExplorer {
   /*
    * Return branch name including target hash.
    * e.g. `["master", "feat-x"]`.
-  */
+   */
   getBranchNames(hash: string): string[] {
     if (this._branchNameCache[hash]) return this._branchNameCache[hash];
     const names = this._gitCmdClient
@@ -70,34 +72,35 @@ export class CommitExplorer {
       .branches()
       .split("\n")
       .map(b => b.replace(/^\*/, "").trim().split(" ")[0])
-      .filter(b => (!!b || b === this._branchName))
+      .filter(b => !!b || b === this._branchName)
       .filter((x, i, self) => self.indexOf(x) === i);
   }
 
   getIntersection(hash: string): string | undefined {
     try {
       return this._gitCmdClient.mergeBase(hash, this._branchName).slice(0, 8);
-    } catch (e) { }
+    } catch (e) {}
   }
 
-  getBranchHash(candidateHashes: string[]): string | undefined {
+  getBranchHash(): string | undefined {
     const branches = this.getAllBranchNames();
-    return branches.map(b => {
-      const hash = this.getIntersection(b);
-      const time = hash ? new Date(this._gitCmdClient.logTime(hash).trim()).getTime() : Number.MAX_SAFE_INTEGER;
-      return { hash, time };
-    })
+    return branches
+      .map(b => {
+        const hash = this.getIntersection(b);
+        const time = hash ? new Date(this._gitCmdClient.logTime(hash).trim()).getTime() : Number.MAX_SAFE_INTEGER;
+        return { hash, time };
+      })
       .filter(a => !!a.hash)
       .sort((a, b) => a.time - b.time)
       .map(b => b.hash)[0];
   }
 
   getCandidateHashes(): string[] {
-    const re = new RegExp(`^this._branchName$`);
-    const mergedBranches = this.getBranchNames(this._commitNodes[0][0])
-      .filter(b => !b.endsWith("/" + this._branchName) && !re.test(b));
+    const mergedBranches = this.getBranchNames(this._commitNodes[0][0]).filter(
+      b => !b.endsWith("/" + this._branchName) && b !== this._branchName,
+    );
     return this._commitNodes
-      .map((c) => c[0])
+      .map(c => c[0])
       .filter(c => {
         const branches = this.getBranchNames(c);
         const hasCurrent = !!branches.find(b => this._branchName === b);
@@ -118,7 +121,7 @@ export class CommitExplorer {
       if (candidateHash === branchHash) return true;
       return this.isReachable(candidateHash, branchHash);
     };
-    const target = candidateHashes.find((hash) => !!traverseLog(hash));
+    const target = candidateHashes.find(hash => !!traverseLog(hash));
     return target;
   }
 
@@ -126,7 +129,7 @@ export class CommitExplorer {
     this._branchName = this.getCurrentBranchName();
     this._commitNodes = this.getCommitNodes();
     const candidateHashes = this.getCandidateHashes();
-    const branchHash = this.getBranchHash(candidateHashes);
+    const branchHash = this.getBranchHash();
     if (!branchHash) return null;
     const baseHash = this.findBaseCommitHash(candidateHashes, branchHash);
     if (!baseHash) return null;

@@ -1,4 +1,4 @@
-import * as path from "path";
+import path from "path";
 import {
   CoreConfig,
   WorkingDirectoryInfo,
@@ -10,7 +10,6 @@ import {
   PluginLogger,
   ComparisonResult,
 } from "reg-suit-interface";
-import { fsUtil } from "reg-suit-util";
 import { EventEmitter } from "events";
 
 const compare = require("reg-cli");
@@ -35,7 +34,7 @@ export interface StepResultAfterComparison extends StepResultAfterExpectedKey {
 }
 
 export interface StepResultAfterActualKey extends StepResultAfterComparison {
-  actualKey: string ;
+  actualKey: string;
 }
 
 export interface StepResultAfterPublish extends StepResultAfterActualKey {
@@ -43,7 +42,6 @@ export interface StepResultAfterPublish extends StepResultAfterActualKey {
 }
 
 export class RegProcessor {
-
   private _logger: PluginLogger;
   private _config: CoreConfig;
   private _directoryInfo: {
@@ -56,9 +54,7 @@ export class RegProcessor {
   private _publisher?: PublisherPlugin<any>;
   private _notifiers: NotifierPlugin<any>[];
 
-  constructor(
-    opt: PluginCreateOptions<ProcessorOptions>,
-  ) {
+  constructor(opt: PluginCreateOptions<ProcessorOptions>) {
     this._logger = opt.logger;
     this._config = opt.coreConfig;
     this._directoryInfo = {
@@ -72,17 +68,17 @@ export class RegProcessor {
 
   runAll() {
     return this.getExpectedKey()
-    .then(ctx => this.syncExpected(ctx))
-    .then(ctx => this.compare(ctx))
-    .then(ctx => this.getActualKey(ctx))
-    .then(ctx => this.publish(ctx))
-    .then(ctx => this.notify(ctx))
-    ;
+      .then(ctx => this.syncExpected(ctx))
+      .then(ctx => this.compare(ctx))
+      .then(ctx => this.getActualKey(ctx))
+      .then(ctx => this.publish(ctx))
+      .then(ctx => this.notify(ctx));
   }
 
   getExpectedKey(): Promise<StepResultAfterExpectedKey> {
     if (this._keyGenerator) {
-      return this._keyGenerator.getExpectedKey()
+      return this._keyGenerator
+        .getExpectedKey()
         .then(key => {
           this._logger.info(`Detected the previous snapshot key: '${key}'`);
           return { expectedKey: key };
@@ -91,8 +87,7 @@ export class RegProcessor {
           this._logger.warn("Failed to detect the previous snapshot key");
           if (reason) this._logger.error(reason);
           return Promise.resolve({ expectedKey: null });
-        })
-      ;
+        });
     } else {
       this._logger.info("Skipped to detect the previous snapshot key because key generator plugin is not set up.");
       return Promise.resolve({ expectedKey: null });
@@ -118,11 +113,15 @@ export class RegProcessor {
       threshold: this._config.threshold,
       thresholdPixel: this._config.thresholdPixel,
       thresholdRate: this._config.thresholdRate,
+      matchingThreshold: this._config.matchingThreshold ?? 0, // matchingThreshold should not be undefined
+      enableAntialias: this._config.enableAntialias,
       enableCliAdditionalDetection: ximgdiffConf.invocationType === "cli",
       enableClientAdditionalDetection: ximgdiffConf.invocationType !== "none",
     }) as EventEmitter;
-    emitter.on("compare", (compareItem: { type: string, path: string }) => {
-      this._logger.verbose(`${this._logger.colors.red(compareItem.type)}: ${this._logger.colors.magenta(compareItem.path)}`);
+    emitter.on("compare", (compareItem: { type: string; path: string }) => {
+      this._logger.verbose(
+        `${this._logger.colors.red(compareItem.type)}: ${this._logger.colors.magenta(compareItem.path)}`,
+      );
     });
     const comparisonResult = new Promise<ComparisonResult>((resolve, reject) => {
       emitter.once("complete", (result: ComparisonResult) => resolve(result));
@@ -149,18 +148,21 @@ export class RegProcessor {
   getActualKey(ctx: StepResultAfterComparison): Promise<StepResultAfterActualKey> {
     const fallbackFn = () => "snapshot_" + ~~(new Date().getTime() / 1000);
     if (this._keyGenerator) {
-      return this._keyGenerator.getActualKey().then(key => {
-        if (!key) {
-          this._logger.warn("Failed to generate the current snapshot key.");
-          return { ...ctx, actualKey: fallbackFn() };
-        }
-        this._logger.info(`The current snapshot key: '${key}'`);
-        return { ...ctx, actualKey: key };
-      }).catch(reason => {
-        this._logger.warn("Failed to gerenate the current snapshot key.");
-        if (reason) this._logger.error(reason);
-        return Promise.resolve({ ...ctx, actualKey: fallbackFn() });
-      });
+      return this._keyGenerator
+        .getActualKey()
+        .then(key => {
+          if (!key) {
+            this._logger.warn("Failed to generate the current snapshot key.");
+            return { ...ctx, actualKey: fallbackFn() };
+          }
+          this._logger.info(`The current snapshot key: '${key}'`);
+          return { ...ctx, actualKey: key };
+        })
+        .catch(reason => {
+          this._logger.warn("Failed to gerenate the current snapshot key.");
+          if (reason) this._logger.error(reason);
+          return Promise.resolve({ ...ctx, actualKey: fallbackFn() });
+        });
     } else {
       const fallbackKey = fallbackFn();
       this._logger.info(`Use '${fallbackKey}' as the current snapshot key because key generator plugin is not set up.`);
@@ -185,7 +187,8 @@ export class RegProcessor {
 
   publish(ctx: StepResultAfterActualKey): Promise<StepResultAfterPublish> {
     if (this._publisher) {
-      return this._publisher.publish(ctx.actualKey)
+      return this._publisher
+        .publish(ctx.actualKey)
         .then(result => {
           this._logger.info(`Published snapshot '${ctx.actualKey}' successfully.`);
           if (result.reportUrl) {
@@ -199,12 +202,15 @@ export class RegProcessor {
           this._logger.error("An error occurs during publishing snapshot:");
           if (reason.code === "CredentialsError") {
             this._logger.error("Failed to read AWS credentials.");
-            this._logger.error(`Create ${this._logger.colors.magenta("~/.aws/credentials")} or export ${this._logger.colors.green("$AWS_ACCESS_KEY_ID")} and ${this._logger.colors.green("$AWS_SECRET_ACCESS_KEY")}.`);
+            this._logger.error(
+              `Create ${this._logger.colors.magenta("~/.aws/credentials")} or export ${this._logger.colors.green(
+                "$AWS_ACCESS_KEY_ID",
+              )} and ${this._logger.colors.green("$AWS_SECRET_ACCESS_KEY")}.`,
+            );
           }
           if (reason) this._logger.error(reason);
           return Promise.reject<StepResultAfterPublish>(reason);
-        })
-      ;
+        });
     } else {
       this._logger.info("Skipped to publish the snapshot data because publisher plugin is not set up.");
       return Promise.resolve(ctx);
@@ -219,16 +225,17 @@ export class RegProcessor {
       this._logger.info("Skipped to notify result because notifier plugins are not set up.");
     }
     this._logger.verbose("Notify parameters:", notifyParams);
-    return this._notifiers.reduce((queue, notifier) => {
-      return queue
-        .then(() => notifier.notify(notifyParams))
-        .catch((reason) => {
-          // Don't re-throw notifiers error because it's not fatal.
-          this._logger.error("An error occurs during notify:");
-          this._logger.error(reason);
-          return Promise.resolve();
-        })
-      ;
-    }, Promise.resolve()).then(() => ctx);
+    return this._notifiers
+      .reduce((queue, notifier) => {
+        return queue
+          .then(() => notifier.notify(notifyParams))
+          .catch(reason => {
+            // Don't re-throw notifiers error because it's not fatal.
+            this._logger.error("An error occurs during notify:");
+            this._logger.error(reason);
+            return Promise.resolve();
+          });
+      }, Promise.resolve())
+      .then(() => ctx);
   }
 }

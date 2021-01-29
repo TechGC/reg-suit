@@ -1,32 +1,28 @@
-/* tslint:disable:no-console */
-import * as chalk from "chalk";
+import { Chalk, Instance } from "chalk";
 import { Logger, Colors, Spinner, ProgressBar } from "reg-suit-interface";
-
-const SpinnerConstructor = require("cli-spinner").Spinner;
-const progress = require("cli-progress");
-const ProgressBarConstructor = progress.Bar;
+import { Bar as ProgressBarConstructor, Presets } from "cli-progress";
+import { Spinner as SpinnerConstructor } from "cli-spinner";
 
 export type LogLevel = "verbose" | "info" | "silent";
 
 const noopSpinner: Spinner = {
-  start: () => { },
-  stop: () => { },
+  start: () => {},
+  stop: () => {},
 };
 
 const noopProgressBar: ProgressBar = {
-  start: (x: number, y?: number) => { },
-  update: (x: number) => { },
-  increment: (x: number) => { },
-  stop: () => { },
+  start: (_x: number, _y?: number) => {},
+  update: (_x: number) => {},
+  increment: (_x: number) => {},
+  stop: () => {},
 };
 
 export class RegLogger implements Logger {
-
   _level: LogLevel;
-  _chalk: chalk.Chalk;
+  _chalk: Chalk;
 
   constructor(private _category = "reg-suit") {
-    this._chalk = chalk.constructor(({ level: 1 } as any));
+    this._chalk = new Instance({ level: 1 });
     this._level = "info";
   }
 
@@ -41,10 +37,10 @@ export class RegLogger implements Logger {
   }
 
   get colors(): Colors {
-    return (<any>this._chalk) as Colors;
+    return this._chalk as Colors;
   }
 
-  set colors(v: Colors) {
+  set colors(_v: Colors) {
     return;
   }
 
@@ -58,18 +54,20 @@ export class RegLogger implements Logger {
 
   getProgressBar(): ProgressBar {
     if (this._level === "silent") return noopProgressBar;
-    const bar = new ProgressBarConstructor({ }, progress.Presets.rect);
+    const bar = new ProgressBarConstructor({}, Presets.rect);
     return bar;
   }
 
   info(msg: string) {
     if (this._level !== "silent") {
+      // eslint-disable-next-line no-console
       console.log(this._prefix + this.colors.green("info ") + msg);
     }
   }
 
   warn(msg: string) {
     if (this._level !== "silent") {
+      // eslint-disable-next-line no-console
       console.warn(this._prefix + this.colors.yellow("warn ") + msg);
     }
   }
@@ -77,8 +75,10 @@ export class RegLogger implements Logger {
   error(obj: string | Error) {
     if (this._level !== "silent") {
       if (typeof obj === "string") {
+        // eslint-disable-next-line no-console
         console.error(this._prefix + this.colors.red("error ") + obj);
       } else {
+        // eslint-disable-next-line no-console
         console.error(this._prefix + this.colors.red("error "), obj);
       }
     }
@@ -86,9 +86,11 @@ export class RegLogger implements Logger {
 
   verbose(msg: string, ...objects: any[]) {
     if (this._level === "verbose") {
+      // eslint-disable-next-line no-console
       console.log(this._prefix + this.colors.green("debug ") + msg);
       if (objects && objects.length) {
         objects.forEach(obj => {
+          // eslint-disable-next-line no-console
           console.log(this.colors.gray(JSON.stringify(obj, null, 2)));
         });
       }

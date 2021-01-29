@@ -1,4 +1,4 @@
-import * as rp from "request-promise";
+import rp from "request-promise";
 
 export interface SendOption {
   webhookUrl: string;
@@ -12,14 +12,14 @@ export function sendWebHook(opt: SendOption): Promise<any> {
     method: "POST",
     json: true,
     body: {
-      "username": "Reg suit",
-      "icon_url": "https://raw.githubusercontent.com/Quramy/reg-suit/master/logo/reglogo_64.png",
-      "attachments": [
+      username: "Reg suit",
+      icon_url: "https://raw.githubusercontent.com/reg-viz/artwork/master/logo/reg-viz-transparent_64.png",
+      attachments: [
         {
-          "color": opt.color,
-          "text": opt.body
-        }
-      ]
+          color: opt.color,
+          text: opt.body,
+        },
+      ],
     },
   };
   return (rp(reqParam) as any) as Promise<any>;

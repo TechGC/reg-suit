@@ -1,14 +1,6 @@
-import * as path from "path";
-
-import {
-  PreparerQuestion,
-  PluginCreateOptions,
-  PluginPreparer
-} from "reg-suit-interface";
-
+import opn from "open";
+import { PreparerQuestion, PluginCreateOptions, PluginPreparer } from "reg-suit-interface";
 import { GitHubPluginOption } from "./github-notifier-plugin";
-
-const open = require("open") as (url: string) => void;
 
 export interface GitHubPreparerOption {
   clientId: string;
@@ -20,7 +12,8 @@ export class GitHubPreparer implements PluginPreparer<GitHubPreparerOption, GitH
       {
         type: "confirm",
         name: "openApp",
-        message: "notify-github plugin requires a client ID of reg-suit GitHub app. Open installation window in your browser",
+        message:
+          "notify-github plugin requires a client ID of reg-suit GitHub app. Open installation window in your browser",
         default: true,
       },
       {
@@ -28,7 +21,7 @@ export class GitHubPreparer implements PluginPreparer<GitHubPreparerOption, GitH
         message: "This repositoriy's client ID of reg-suit GitHub app",
         name: "clientId",
         when: ({ openApp }: any) => {
-          openApp && open("https://reg-viz.github.io/reg-suit/gh-app/");
+          openApp && opn("https://reg-viz.github.io/gh-app/index.html");
           return true;
         },
       },

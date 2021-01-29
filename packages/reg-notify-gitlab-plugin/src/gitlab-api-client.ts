@@ -1,7 +1,8 @@
 export type ProjectIdType = number;
 export type MergeResuestIidType = number;
 export type NoteIdType = number;
-import * as rp from "request-promise";
+export type DiscussionIdType = number;
+import rp from "request-promise";
 
 export type MergeRequestResource = {
   iid: MergeResuestIidType;
@@ -18,9 +19,14 @@ export type NoteResouce = {
   body: string;
 };
 
+export type DiscussionResource = {
+  id: DiscussionIdType;
+  notes: NoteResouce[];
+};
+
 export type GetMergeRequestsParams = {
   project_id: ProjectIdType;
-}
+};
 
 export type PutMergeRequestParams = {
   project_id: ProjectIdType;
@@ -31,7 +37,7 @@ export type PutMergeRequestParams = {
 export type GetMergeRequestCommitsParams = {
   project_id: ProjectIdType;
   merge_request_iid: MergeResuestIidType;
-}
+};
 
 export type GetMergeRequestNotesParams = {
   project_id: ProjectIdType;
@@ -51,6 +57,12 @@ export type PutMergeRequestNoteParams = {
   body: string;
 };
 
+export type PostMergeRequestDiscussionParams = {
+  project_id: ProjectIdType;
+  merge_request_iid: MergeResuestIidType;
+  body: string;
+};
+
 export interface GitLabApiClient {
   getMergeRequests(params: GetMergeRequestsParams): Promise<MergeRequestResource[]>;
   putMergeRequest(params: PutMergeRequestParams): Promise<MergeRequestResource>;
@@ -58,13 +70,11 @@ export interface GitLabApiClient {
   getMergeRequestNotes(params: GetMergeRequestNotesParams): Promise<NoteResouce[]>;
   postMergeRequestNote(params: PostMergeRequestNoteParams): Promise<NoteResouce>;
   putMergeRequestNote(params: PutMergeRequestNoteParams): Promise<NoteResouce>;
+  postMergeRequestDiscussion(params: PostMergeRequestDiscussionParams): Promise<DiscussionResource>;
 }
 
 export class DefaultGitLabApiClient implements GitLabApiClient {
-  constructor(
-    private _urlPrefix: string,
-    private _token: string,
-  ) { }
+  constructor(private _urlPrefix: string, private _token: string) {}
 
   getMergeRequests(params: GetMergeRequestsParams): Promise<MergeRequestResource[]> {
     const reqParam: rp.OptionsWithUrl = {
@@ -73,7 +83,7 @@ export class DefaultGitLabApiClient implements GitLabApiClient {
       json: true,
       headers: {
         "Private-Token": this._token,
-      }
+      },
     };
     return (rp(reqParam) as any) as Promise<MergeRequestResource[]>;
   }
@@ -98,7 +108,7 @@ export class DefaultGitLabApiClient implements GitLabApiClient {
       json: true,
       headers: {
         "Private-Token": this._token,
-      }
+      },
     };
     return (rp(reqParam) as any) as Promise<CommitResource[]>;
   }
@@ -110,7 +120,7 @@ export class DefaultGitLabApiClient implements GitLabApiClient {
       json: true,
       headers: {
         "Private-Token": this._token,
-      }
+      },
     };
     return (rp(reqParam) as any) as Promise<NoteResouce[]>;
   }
@@ -124,7 +134,7 @@ export class DefaultGitLabApiClient implements GitLabApiClient {
         "Private-Token": this._token,
       },
       body: {
-        "body": params.body,
+        body: params.body,
       },
     };
     return (rp(reqParam) as any) as Promise<NoteResouce>;
@@ -139,10 +149,24 @@ export class DefaultGitLabApiClient implements GitLabApiClient {
         "Private-Token": this._token,
       },
       body: {
-        "body": params.body,
+        body: params.body,
       },
     };
     return (rp(reqParam) as any) as Promise<NoteResouce>;
   }
 
+  postMergeRequestDiscussion(params: PostMergeRequestDiscussionParams): Promise<DiscussionResource> {
+    const reqParam: rp.OptionsWithUrl = {
+      method: "POST",
+      url: `${this._urlPrefix}/api/v4/projects/${params.project_id}/merge_requests/${params.merge_request_iid}/discussions`,
+      json: true,
+      headers: {
+        "Private-Token": this._token,
+      },
+      body: {
+        body: params.body,
+      },
+    };
+    return (rp(reqParam) as any) as Promise<DiscussionResource>;
+  }
 }

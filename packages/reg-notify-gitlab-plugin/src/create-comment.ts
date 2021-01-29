@@ -6,12 +6,11 @@ export interface CommentSeed {
   passedItemsCount: number;
 }
 
-
 // NOTE: The following function is copied from /packages/reg-gh-app/src/pr-comment-fns.ts
 export function createCommentBody(eventBody: CommentSeed) {
   const lines: string[] = [];
   if (eventBody.failedItemsCount === 0 && eventBody.newItemsCount === 0 && eventBody.deletedItemsCount === 0) {
-    lines.push(`:sparkles::sparkles: **That's perfect, there is no visual difference!** :sparkles::sparkles:`);
+    lines.push(`:sparkles: :sparkles: **That's perfect, there is no visual difference!** :sparkles: :sparkles:`);
     if (eventBody.reportUrl) {
       lines.push("");
       lines.push(`You can check the report out [here](${eventBody.reportUrl}).`);

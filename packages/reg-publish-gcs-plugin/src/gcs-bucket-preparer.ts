@@ -1,12 +1,7 @@
-import uuid from "uuid/v4";
-// import { S3, config as awsConfig } from "aws-sdk";
-import { PluginPreparer,
-  PluginCreateOptions,
-  PreparerQuestions,
-  PluginLogger
-} from "reg-suit-interface";
+import { v4 as uuid } from "uuid";
+import { PluginPreparer, PluginCreateOptions, PluginLogger } from "reg-suit-interface";
 import { PluginConfig } from "./gcs-publisher-plugin";
-import Gcs from "@google-cloud/storage";
+import { Storage } from "@google-cloud/storage";
 
 export interface SetupInquireResult {
   // projectId: string;
@@ -49,7 +44,7 @@ export class GcsBucketPreparer implements PluginPreparer<SetupInquireResult, Plu
         // projectId: ir.projectId as string,
         bucketName: ir.bucketName as string,
       });
-    } else  {
+    } else {
       const id = uuid();
       const bucketName = `${BUCKET_PREFIX}-${id}`;
       if (config.noEmit) {
@@ -59,17 +54,15 @@ export class GcsBucketPreparer implements PluginPreparer<SetupInquireResult, Plu
       this._logger.info(`Create new GCS bucket: ${this._logger.colors.magenta(bucketName)}`);
       const spinner = this._logger.getSpinner(`creating bucket...`);
       spinner.start();
-      return this._createBucket(bucketName)
-        .then(bucket => {
-          spinner.stop();
-          return { bucketName: bucket.name };
-        })
-      ;
+      return this._createBucket(bucketName).then(bucket => {
+        spinner.stop();
+        return { bucketName: bucket.name };
+      });
     }
   }
 
   async _createBucket(bucketName: string) {
-    const bucket = Gcs().bucket(bucketName);
+    const bucket = new Storage().bucket(bucketName);
     await bucket.create({
       coldline: true,
     });
@@ -79,5 +72,4 @@ export class GcsBucketPreparer implements PluginPreparer<SetupInquireResult, Plu
     });
     return bucket;
   }
-
 }

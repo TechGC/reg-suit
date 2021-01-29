@@ -1,9 +1,0 @@
-{
-  "extends": "./tsconfig.build.json",
-  "compilerOptions": {
-    "paths": {
-      "reg-suit-interface": ["./reg-suit-interface/src/index.ts"],
-      "reg-suit-util": ["./reg-suit-util/src/index.ts"]
-    }
-  }
-}

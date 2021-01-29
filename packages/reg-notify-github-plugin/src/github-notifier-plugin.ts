@@ -1,18 +1,11 @@
-import * as fs from "fs";
-import * as path from "path";
+import path from "path";
 import { Repository } from "tiny-commit-walker";
 import { inflateRawSync } from "zlib";
-import { execSync } from "child_process";
-import { BaseEventBody, CommentToPrBody, UpdateStatusBody } from "reg-gh-app-interface";
+import { getGhAppInfo, BaseEventBody, CommentToPrBody, UpdateStatusBody } from "reg-gh-app-interface";
 import { fsUtil } from "reg-suit-util";
-import {
-  NotifierPlugin,
-  NotifyParams,
-  PluginCreateOptions,
-  PluginLogger,
-} from "reg-suit-interface";
+import { NotifierPlugin, NotifyParams, PluginCreateOptions, PluginLogger } from "reg-suit-interface";
 
-import * as rp from "request-promise";
+import rp from "request-promise";
 
 export interface GitHubPluginOption {
   clientId?: string;
@@ -20,6 +13,7 @@ export interface GitHubPluginOption {
   owner?: string;
   repository?: string;
   prComment?: boolean;
+  setCommitStatus?: boolean;
   customEndpoint?: string;
 }
 
@@ -46,14 +40,12 @@ const errorHandler = (logger: PluginLogger) => {
   };
 };
 
-const defaultEndpoint = require("../.endpoint.json").endpoint as string;
-
 export class GitHubNotifierPlugin implements NotifierPlugin<GitHubPluginOption> {
-
   _logger!: PluginLogger;
   _noEmit!: boolean;
   _apiOpt!: BaseEventBody;
   _prComment!: boolean;
+  _setCommitStatus!: boolean;
 
   _apiPrefix!: string;
   _repo!: Repository;
@@ -64,7 +56,7 @@ export class GitHubNotifierPlugin implements NotifierPlugin<GitHubPluginOption> 
       this._logger.error(`Invalid client ID: ${this._logger.colors.red(clientId)}`);
       throw new Error(`Invalid client ID: ${clientId}`);
     }
-    const [_, repository, installationId, owner] = tmp;
+    const [repository, installationId, owner] = tmp.slice(1);
     return { repository, installationId, owner };
   }
 
@@ -74,10 +66,11 @@ export class GitHubNotifierPlugin implements NotifierPlugin<GitHubPluginOption> 
     if (config.options.clientId) {
       this._apiOpt = this._decodeClientId(config.options.clientId);
     } else {
-      this._apiOpt = (config.options as BaseEventBody);
+      this._apiOpt = config.options as BaseEventBody;
     }
     this._prComment = config.options.prComment !== false;
-    this._apiPrefix = config.options.customEndpoint || defaultEndpoint;
+    this._setCommitStatus = config.options.setCommitStatus !== false;
+    this._apiPrefix = config.options.customEndpoint || getGhAppInfo().endpoint;
     this._repo = new Repository(path.join(fsUtil.prjRootDir(".git"), ".git"));
   }
 
@@ -88,7 +81,7 @@ export class GitHubNotifierPlugin implements NotifierPlugin<GitHubPluginOption> 
     const newItemsCount = newItems.length;
     const deletedItemsCount = deletedItems.length;
     const passedItemsCount = passedItems.length;
-    const state = (failedItemsCount + newItemsCount + deletedItemsCount === 0) ? "success" : "failure";
+    const state = failedItemsCount + newItemsCount + deletedItemsCount === 0 ? "success" : "failure";
     const description = state === "success" ? "Regression testing passed" : "Regression testing failed";
     let sha1: string;
 
@@ -111,22 +104,31 @@ export class GitHubNotifierPlugin implements NotifierPlugin<GitHubPluginOption> 
     if (this._prComment) {
       updateStatusBody.metadata = { failedItemsCount, newItemsCount, deletedItemsCount, passedItemsCount };
     }
-    const statusReq: rp.OptionsWithUri = {
-      uri: `${this._apiPrefix}/api/update-status`,
-      method: "POST",
-      body: updateStatusBody,
-      json: true,
-    };
-    this._logger.info(`Update status for ${this._logger.colors.green(updateStatusBody.sha1)} .`);
-    this._logger.verbose("update-status: ", statusReq);
-    const reqs = [statusReq];
+
+    const reqs = [];
+
+    if (this._setCommitStatus) {
+      const statusReq: rp.OptionsWithUri = {
+        uri: `${this._apiPrefix}/api/update-status`,
+        method: "POST",
+        body: updateStatusBody,
+        json: true,
+      };
+      this._logger.info(`Update status for ${this._logger.colors.green(updateStatusBody.sha1)} .`);
+      this._logger.verbose("update-status: ", statusReq);
+      reqs.push(statusReq);
+    }
 
     if (this._prComment) {
       if (head.type === "branch" && head.branch) {
         const prCommentBody: CommentToPrBody = {
           ...this._apiOpt,
           branchName: head.branch.name,
-          failedItemsCount, newItemsCount, deletedItemsCount, passedItemsCount,
+          headOid: sha1,
+          failedItemsCount,
+          newItemsCount,
+          deletedItemsCount,
+          passedItemsCount,
         };
         if (params.reportUrl) prCommentBody.reportUrl = params.reportUrl;
         const commentReq: rp.OptionsWithUri = {
@@ -149,7 +151,6 @@ export class GitHubNotifierPlugin implements NotifierPlugin<GitHubPluginOption> 
     spinner.start();
     return Promise.all(reqs.map(r => rp(r).catch(errorHandler(this._logger))))
       .then(() => spinner.stop())
-      .catch(() => spinner.stop())
-    ;
+      .catch(() => spinner.stop());
   }
 }

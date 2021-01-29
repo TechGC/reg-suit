@@ -1,9 +1,11 @@
 defaults: &defaults
   working_directory: ~/reg-suit
   docker:
-    - image: quramy/node-nightmare
+    - image: regviz/node-xcb
+      auth:
+        username: $DOCKERHUB_USERNAME
+        password: $DOCKERHUB_PASSWORD
       environment:
-        DISPLAY: ":99"
         GOOGLE_APPLICATION_CREDENTIALS: "/root/gcloud-service-key.json"
 
 version: 2
@@ -35,16 +37,14 @@ jobs:
       - run:
           name: Test
           command: |
-            xvfbd start
             yarn run test
-            xvfbd stop
       - run:
           name: Regression using gh-io components
           command: |
             cd packages/reg-suit-toppage
             npm run regression
 
-  patch_release:
+  deploy:
     <<: *defaults
     steps:
       - add-ssh-keys:
@@ -72,127 +72,26 @@ jobs:
             echo "//registry.npmjs.org/:_authToken=${NPM_AUTH_TOKEN}" > ~/.npmrc
             npm whoami
       - run:
-          name: Deploy services
+          name: Build LP
           command: |
-            yarn run deploy
+            yarn run build:io
       - run:
-          name: Publish to npm
+          name: Deploy
           command: |
-            yarn run lerna run prepublish
-            yarn run lerna publish -- --yes --cd-version="patch"
-
-  minor_release:
-    <<: *defaults
-    steps:
-      - add-ssh-keys:
-          fingerprints:
-            - "9b:4a:d1:c6:ff:b7:49:b7:b7:bf:24:fb:b1:1e:bc:a6"
-      - checkout
-      - restore_cache:
-          keys:
-            - v1-dependencies-{{ checksum "yarn.lock" }}
-            - v1-dependencies-
-      - run:
-          name: Install dependencies
-          command: yarn --pure-lockfile
-      - run:
-          name: Bootstrap packages
-          command: yarn run bootstrap
-      - run:
-          name: Setup git
-          command: |
-            git config --global user.email "yosuke.kurami@gmail.com"
-            git config --global user.name "Quramy"
-      - run:
-          name: Login npm
-          command: |
-            echo "//registry.npmjs.org/:_authToken=${NPM_AUTH_TOKEN}" > ~/.npmrc
-            npm whoami
-      - run:
-          name: Deploy services
-          command: |
-            cd packages/reg-gh-app
-            ./node_modules/.bin/sls config credentials --provider aws --key ${AWS_ACCESS_KEY_ID} --secret ${AWS_SECRET_ACCESS_KEY} 
-            cd ../../
-            yarn run deploy
-      - run:
-          name: Publish to npm
-          command: |
-            yarn run lerna run prepublish
-            yarn run lerna publish -- --yes --cd-version="minor"
-
-  deply_service:
-    <<: *defaults
-    steps:
-      - add-ssh-keys:
-          fingerprints:
-            - "9b:4a:d1:c6:ff:b7:49:b7:b7:bf:24:fb:b1:1e:bc:a6"
-      - run:
-          name: Setup git
-          command: |
-            git config --global user.email "yosuke.kurami@gmail.com"
-            git config --global user.name "Quramy"
-      - checkout
-      - restore_cache:
-          keys:
-            - v1-dependencies-{{ checksum "yarn.lock" }}
-            - v1-dependencies-
-      - run:
-          name: Install dependencies
-          command: yarn --pure-lockfile
-      - run:
-          name: Bootstrap packages
-          command: yarn run bootstrap
-      - run:
-          name: Deploy services
-          command: |
-            cd packages/reg-gh-app
-            ./node_modules/.bin/sls config credentials --provider aws --key ${AWS_ACCESS_KEY_ID} --secret ${AWS_SECRET_ACCESS_KEY} 
-            cd ../../
             yarn run deploy
 
 workflows:
   version: 2
   reg_build_pipeline:
     jobs:
-      - build
-      - confirm_patch:
-          type: approval
+      - build:
           filters:
             branches:
-              only: master
-          requires:
-            - build
-      - confirm_minor:
-          type: approval
+              ignore:
+                - gh-pages
+      - deploy:
           filters:
+            tags:
+              only: /^v.*/
             branches:
-              only: master
-          requires:
-            - build
-      - confirm_deploy_services:
-          type: approval
-          filters:
-            branches:
-              only: master
-          requires:
-            - build
-      - patch_release:
-          filters:
-            branches:
-              only: master
-          requires:
-            - confirm_patch
-      - minor_release:
-          filters:
-            branches:
-              only: master
-          requires:
-            - confirm_minor
-      - deply_service:
-          filters:
-            branches:
-              only: master
-          requires:
-            - confirm_deploy_services
-          
+              ignore: /.*/
